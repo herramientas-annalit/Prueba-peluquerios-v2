@@ -1,3 +1,5 @@
 node_modules/
 .env
-*.json
+*credentials*.json
+*service-account*.json
+prueba-peluqueros*.json
