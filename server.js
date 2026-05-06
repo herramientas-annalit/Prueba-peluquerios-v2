@@ -25,10 +25,16 @@ const SERVICIOS = {
 };
 
 function getCalendarClient() {
+  const rawKey = process.env.GOOGLE_PRIVATE_KEY || '';
+  // Railway puede entregar la clave con \n literales o con saltos reales
+  const privateKey = rawKey.includes('\\n')
+    ? rawKey.replace(/\\n/g, '\n')
+    : rawKey;
+
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.split('\\n').join('\n'),
+      private_key: privateKey,
     },
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
