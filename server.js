@@ -60,6 +60,10 @@ app.get('/api/disponibilidad', async (req, res) => {
   const { fecha } = req.query;
   if (!fecha) return res.status(400).json({ error: 'Falta el parámetro fecha' });
 
+  console.log(`[disponibilidad] Consultando fecha: ${fecha}`);
+  console.log(`[disponibilidad] CALENDAR_ID: ${CALENDAR_ID}`);
+  console.log(`[disponibilidad] CLIENT_EMAIL: ${process.env.GOOGLE_CLIENT_EMAIL}`);
+
   try {
     const calendar = getCalendarClient();
     const iniciodia = new Date(`${fecha}T00:00:00`);
@@ -74,7 +78,10 @@ app.get('/api/disponibilidad', async (req, res) => {
     });
 
     const eventosOcupados = data.items || [];
+    console.log(`[disponibilidad] Eventos encontrados: ${eventosOcupados.length}`);
+
     const todosSlots = generarSlots(fecha);
+    console.log(`[disponibilidad] Slots generados: ${todosSlots.length}`);
 
     const slots = todosSlots.map(slot => {
       const ocupado = eventosOcupados.some(ev => {
@@ -87,8 +94,9 @@ app.get('/api/disponibilidad', async (req, res) => {
 
     res.json({ fecha, slots });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al consultar el calendario' });
+    console.error('[disponibilidad] ERROR:', err.message);
+    console.error(err.stack);
+    res.status(500).json({ error: err.message });
   }
 });
 
