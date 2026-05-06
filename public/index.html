@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Peluquería Glamour | Reserva tu cita</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <header class="header">
+    <div class="container header-inner">
+      <div class="brand">
+        <span class="brand-icon">✂️</span>
+        <span class="brand-name">Glamour Studio</span>
+      </div>
+      <nav class="nav">
+        <a href="#servicios">Servicios</a>
+        <a href="#reserva">Reservar</a>
+        <a href="#contacto">Contacto</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-inner">
+      <div class="hero-text">
+        <span class="hero-badge">Reserva online</span>
+        <h1>Tu corte,<br /><em>cuando quieras.</em></h1>
+        <p>Reserva tu cita en segundos. Sin llamadas, sin esperas. Elige tu servicio y el horario que más te venga bien.</p>
+        <a href="#reserva" class="btn btn-primary">Reservar ahora</a>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-inner">
+          <div class="availability-badge">🟢 Disponible hoy</div>
+          <p class="hero-card-title">Horario de atención</p>
+          <div class="schedule-preview">
+            <div class="schedule-row"><span>Mañana</span><span>09:00 – 13:30</span></div>
+            <div class="schedule-divider"></div>
+            <div class="schedule-row"><span>Tarde</span><span>16:30 – 20:00</span></div>
+            <div class="schedule-divider"></div>
+            <div class="schedule-row"><span>Lunes a Viernes</span><span>✓</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="servicios">
+    <div class="container">
+      <h2 class="section-title">Nuestros servicios</h2>
+      <p class="section-subtitle">Citas de 30 minutos · Reserva al instante</p>
+      <div class="services-grid">
+        <div class="service-card" onclick="elegirServicio('corte')">
+          <div class="service-icon">✂️</div>
+          <div class="service-name">Corte</div>
+          <div class="service-duration">⏱ 30 min</div>
+          <div class="service-price">15 €</div>
+          <div class="service-cta">Reservar →</div>
+        </div>
+        <div class="service-card" onclick="elegirServicio('barba')">
+          <div class="service-icon">🪒</div>
+          <div class="service-name">Barba</div>
+          <div class="service-duration">⏱ 30 min</div>
+          <div class="service-price">10 €</div>
+          <div class="service-cta">Reservar →</div>
+        </div>
+        <div class="service-card service-card-combo" onclick="elegirServicio('corte_barba')">
+          <div class="service-badge">Combo</div>
+          <div class="service-icon">✂️🪒</div>
+          <div class="service-name">Corte + Barba</div>
+          <div class="service-duration">⏱ 30 min</div>
+          <div class="service-price">22 €</div>
+          <div class="service-cta">Reservar →</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESERVA -->
+  <section class="section section-alt" id="reserva">
+    <div class="container">
+      <h2 class="section-title">Reserva tu cita</h2>
+      <p class="section-subtitle">Sigue los pasos para confirmar tu turno</p>
+
+      <!-- STEPPER -->
+      <div class="stepper">
+        <div class="step active" id="step1"><div class="step-circle">1</div><span>Servicio</span></div>
+        <div class="step-line"></div>
+        <div class="step" id="step2"><div class="step-circle">2</div><span>Fecha</span></div>
+        <div class="step-line"></div>
+        <div class="step" id="step3"><div class="step-circle">3</div><span>Hora</span></div>
+        <div class="step-line"></div>
+        <div class="step" id="step4"><div class="step-circle">4</div><span>Confirmar</span></div>
+      </div>
+
+      <!-- PANEL 1: SERVICIO -->
+      <div class="booking-panel" id="panel1">
+        <h3>¿Qué servicio quieres?</h3>
+        <div class="services-select-grid">
+          <div class="service-card" id="svc-corte" onclick="seleccionarServicio('corte')">
+            <div class="service-icon">✂️</div>
+            <div class="service-name">Corte</div>
+            <div class="service-duration">⏱ 30 min</div>
+            <div class="service-price">15 €</div>
+          </div>
+          <div class="service-card" id="svc-barba" onclick="seleccionarServicio('barba')">
+            <div class="service-icon">🪒</div>
+            <div class="service-name">Barba</div>
+            <div class="service-duration">⏱ 30 min</div>
+            <div class="service-price">10 €</div>
+          </div>
+          <div class="service-card service-card-combo" id="svc-corte_barba" onclick="seleccionarServicio('corte_barba')">
+            <div class="service-badge">Combo</div>
+            <div class="service-icon">✂️🪒</div>
+            <div class="service-name">Corte + Barba</div>
+            <div class="service-duration">⏱ 30 min</div>
+            <div class="service-price">22 €</div>
+          </div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-primary" id="btn1" disabled onclick="irA(2)">Continuar</button>
+        </div>
+      </div>
+
+      <!-- PANEL 2: FECHA -->
+      <div class="booking-panel hidden" id="panel2">
+        <h3>Elige el día</h3>
+        <div class="calendar" id="calendar"></div>
+        <div class="panel-actions">
+          <button class="btn btn-secondary" onclick="irA(1)">Atrás</button>
+          <button class="btn btn-primary" id="btn2" disabled onclick="cargarHoras()">Continuar</button>
+        </div>
+      </div>
+
+      <!-- PANEL 3: HORA -->
+      <div class="booking-panel hidden" id="panel3">
+        <h3>Elige la hora</h3>
+        <p class="slots-fecha" id="slotsFecha"></p>
+        <div class="time-slots" id="timeSlots">
+          <div class="slots-loading">Cargando disponibilidad...</div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-secondary" onclick="irA(2)">Atrás</button>
+          <button class="btn btn-primary" id="btn3" disabled onclick="irA(4)">Continuar</button>
+        </div>
+      </div>
+
+      <!-- PANEL 4: CONFIRMAR -->
+      <div class="booking-panel hidden" id="panel4">
+        <h3>Confirma tu reserva</h3>
+        <div class="confirm-card" id="confirmCard"></div>
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input type="text" id="clientName" placeholder="Ej: Juan García" />
+        </div>
+        <div class="form-group">
+          <label>Teléfono *</label>
+          <input type="tel" id="clientPhone" placeholder="+34 600 000 000" />
+        </div>
+        <div class="form-group">
+          <label>Email (opcional)</label>
+          <input type="email" id="clientEmail" placeholder="tu@email.com" />
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-secondary" onclick="irA(3)">Atrás</button>
+          <button class="btn btn-success" onclick="confirmarReserva()">Confirmar reserva</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- MODAL ÉXITO -->
+  <div class="modal-overlay hidden" id="successModal">
+    <div class="modal">
+      <div class="modal-icon">🎉</div>
+      <h2>¡Reserva confirmada!</h2>
+      <p id="modalSummary"></p>
+      <p class="modal-note">La cita ha quedado registrada en el calendario.</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="resetear()">Listo</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="section" id="testimonios">
+    <div class="container">
+      <h2 class="section-title">Lo que dicen nuestros clientes</h2>
+      <div class="testimonials-grid">
+        <div class="testimonial">
+          <div class="stars">★★★★★</div>
+          <p>"Muy fácil reservar desde el móvil. En dos minutos tenía mi cita confirmada."</p>
+          <div class="testimonial-author">— Martín G.</div>
+        </div>
+        <div class="testimonial">
+          <div class="stars">★★★★★</div>
+          <p>"Me encanta ver los horarios disponibles al momento y elegir el que mejor me va."</p>
+          <div class="testimonial-author">— Pablo R.</div>
+        </div>
+        <div class="testimonial">
+          <div class="stars">★★★★★</div>
+          <p>"El recordatorio automático es genial, nunca se me olvida la cita."</p>
+          <div class="testimonial-author">— Lucas K.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer" id="contacto">
+    <div class="container footer-inner">
+      <div>
+        <div class="brand">
+          <span class="brand-icon">✂️</span>
+          <span class="brand-name">Glamour Studio</span>
+        </div>
+        <p class="footer-tagline">Tu corte, cuando quieras.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Contacto</h4>
+        <a href="tel:+34600000000">📞 +34 600 000 000</a>
+        <a href="https://wa.me/34600000000">💬 WhatsApp</a>
+        <a href="mailto:hola@glamourstudio.com">✉️ hola@glamourstudio.com</a>
+      </div>
+      <div class="footer-links">
+        <h4>Horarios</h4>
+        <p>Lun – Vie: 9:00 – 13:30</p>
+        <p>Lun – Vie: 16:30 – 20:00</p>
+        <p>Sáb y Dom: cerrado</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 Glamour Studio · Todos los derechos reservados</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
