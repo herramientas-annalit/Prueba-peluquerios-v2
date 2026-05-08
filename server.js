@@ -1,65 +1,33 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { google } = require('googleapis');
+const axios = require('axios');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
-const TIMEZONE = 'Europe/Madrid';
-const SLOT_DURATION = 30; // minutos
-
-// Horarios comerciales
-const HORARIO = [
-  { inicio: '09:00', fin: '13:30' },
-  { inicio: '16:30', fin: '20:00' },
-];
+const GHL_API_KEY     = process.env.GHL_API_KEY;
+const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
+const GHL_CALENDAR_ID = process.env.GHL_CALENDAR_ID;
+const TIMEZONE        = 'Europe/Madrid';
+const SLOT_DURATION   = 30; // minutos
 
 const SERVICIOS = {
-  corte:       { nombre: 'Corte',        precio: '15 €' },
-  barba:       { nombre: 'Barba',        precio: '10 €' },
+  corte:       { nombre: 'Corte',         precio: '15 €' },
+  barba:       { nombre: 'Barba',         precio: '10 €' },
   corte_barba: { nombre: 'Corte + Barba', precio: '22 €' },
 };
 
-function getCalendarClient() {
-  const rawKey = process.env.GOOGLE_PRIVATE_KEY || '';
-  // Railway puede entregar la clave con \n literales o con saltos reales
-  const privateKey = rawKey.includes('\\n')
-    ? rawKey.replace(/\\n/g, '\n')
-    : rawKey;
-
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: privateKey,
-    },
-    scopes: ['https://www.googleapis.com/auth/calendar'],
-  });
-  return google.calendar({ version: 'v3', auth });
-}
-
-// Genera todos los slots del día según horario comercial
-function generarSlots(fecha) {
-  const slots = [];
-  for (const bloque of HORARIO) {
-    const [hIni, mIni] = bloque.inicio.split(':').map(Number);
-    const [hFin, mFin] = bloque.fin.split(':').map(Number);
-    let minutos = hIni * 60 + mIni;
-    const finMinutos = hFin * 60 + mFin;
-    while (minutos + SLOT_DURATION <= finMinutos) {
-      const h = String(Math.floor(minutos / 60)).padStart(2, '0');
-      const m = String(minutos % 60).padStart(2, '0');
-      const inicio = new Date(`${fecha}T${h}:${m}:00`);
-      const fin = new Date(inicio.getTime() + SLOT_DURATION * 60000);
-      slots.push({ hora: `${h}:${m}`, inicio, fin });
-      minutos += SLOT_DURATION;
-    }
-  }
-  return slots;
-}
+const ghl = axios.create({
+  baseURL: 'https://services.leadconnectorhq.com',
+  headers: {
+    Authorization: `Bearer ${GHL_API_KEY}`,
+    Version: '2021-07-28',
+    'Content-Type': 'application/json',
+  },
+});
 
 // GET /api/disponibilidad?fecha=2026-05-10
 app.get('/api/disponibilidad', async (req, res) => {
@@ -67,42 +35,37 @@ app.get('/api/disponibilidad', async (req, res) => {
   if (!fecha) return res.status(400).json({ error: 'Falta el parámetro fecha' });
 
   console.log(`[disponibilidad] Consultando fecha: ${fecha}`);
-  console.log(`[disponibilidad] CALENDAR_ID: ${CALENDAR_ID}`);
-  console.log(`[disponibilidad] CLIENT_EMAIL: ${process.env.GOOGLE_CLIENT_EMAIL}`);
 
   try {
-    const calendar = getCalendarClient();
-    const iniciodia = new Date(`${fecha}T00:00:00`);
-    const findi = new Date(`${fecha}T23:59:59`);
+    // GHL espera timestamps en milisegundos
+    const startMs = new Date(`${fecha}T00:00:00`).getTime();
+    const endMs   = new Date(`${fecha}T23:59:59`).getTime();
 
-    const { data } = await calendar.events.list({
-      calendarId: CALENDAR_ID,
-      timeMin: iniciodia.toISOString(),
-      timeMax: findi.toISOString(),
-      singleEvents: true,
-      orderBy: 'startTime',
+    const { data } = await ghl.get(`/calendars/${GHL_CALENDAR_ID}/free-slots`, {
+      params: {
+        startDate: startMs,
+        endDate:   endMs,
+        timezone:  TIMEZONE,
+      },
     });
 
-    const eventosOcupados = data.items || [];
-    console.log(`[disponibilidad] Eventos encontrados: ${eventosOcupados.length}`);
+    console.log(`[disponibilidad] Respuesta GHL:`, JSON.stringify(data).slice(0, 300));
 
-    const todosSlots = generarSlots(fecha);
-    console.log(`[disponibilidad] Slots generados: ${todosSlots.length}`);
+    // GHL devuelve { [fecha]: { slots: [{ startTime, endTime }] } }
+    const diaData = data[fecha] || data[Object.keys(data)[0]] || {};
+    const slotsGHL = diaData.slots || [];
 
-    const slots = todosSlots.map(slot => {
-      const ocupado = eventosOcupados.some(ev => {
-        const evInicio = new Date(ev.start.dateTime);
-        const evFin = new Date(ev.end.dateTime);
-        return slot.inicio < evFin && slot.fin > evInicio;
-      });
-      return { hora: slot.hora, disponible: !ocupado };
+    const slots = slotsGHL.map(slot => {
+      // startTime viene como "2026-05-10T09:00:00+02:00" o similar
+      const horaLocal = new Date(slot.startTime)
+        .toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: TIMEZONE });
+      return { hora: horaLocal, disponible: true };
     });
 
     res.json({ fecha, slots });
   } catch (err) {
-    console.error('[disponibilidad] ERROR:', err.message);
-    console.error(err.stack);
-    res.status(500).json({ error: err.message });
+    console.error('[disponibilidad] ERROR:', err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data?.message || err.message });
   }
 });
 
@@ -118,37 +81,55 @@ app.post('/api/reservar', async (req, res) => {
   if (!svc) return res.status(400).json({ error: 'Servicio no válido' });
 
   try {
-    const calendar = getCalendarClient();
-    const inicio = new Date(`${fecha}T${hora}:00`);
-    const fin = new Date(inicio.getTime() + SLOT_DURATION * 60000);
+    // 1. Buscar o crear contacto en GHL
+    let contactId;
 
-    // Verificar que el slot sigue libre
-    const { data: check } = await calendar.events.list({
-      calendarId: CALENDAR_ID,
-      timeMin: inicio.toISOString(),
-      timeMax: fin.toISOString(),
-      singleEvents: true,
+    const busqueda = await ghl.get('/contacts/search/duplicate', {
+      params: { locationId: GHL_LOCATION_ID, phone: telefono },
     });
 
-    if (check.items && check.items.length > 0) {
-      return res.status(409).json({ error: 'Ese horario ya no está disponible' });
+    if (busqueda.data?.contact?.id) {
+      contactId = busqueda.data.contact.id;
+      console.log(`[reservar] Contacto existente: ${contactId}`);
+    } else {
+      const [firstName, ...rest] = nombre.trim().split(' ');
+      const nuevoContacto = await ghl.post('/contacts/', {
+        locationId: GHL_LOCATION_ID,
+        firstName,
+        lastName: rest.join(' ') || '',
+        phone: telefono,
+        ...(email && { email }),
+        tags: ['peluqueria', 'web-booking'],
+      });
+      contactId = nuevoContacto.data?.contact?.id;
+      console.log(`[reservar] Contacto creado: ${contactId}`);
     }
 
-    await calendar.events.insert({
-      calendarId: CALENDAR_ID,
-      resource: {
-        summary: `${svc.nombre} — ${nombre}`,
-        description: `Servicio: ${svc.nombre} (${svc.precio})\nTeléfono: ${telefono}${email ? '\nEmail: ' + email : ''}`,
-        start: { dateTime: inicio.toISOString(), timeZone: TIMEZONE },
-        end:   { dateTime: fin.toISOString(),   timeZone: TIMEZONE },
-        attendees: email ? [{ email }] : [],
-      },
+    if (!contactId) throw new Error('No se pudo obtener el contacto de GHL');
+
+    // 2. Crear la cita en GHL
+    const inicioISO = new Date(`${fecha}T${hora}:00`).toISOString();
+    const finISO    = new Date(new Date(`${fecha}T${hora}:00`).getTime() + SLOT_DURATION * 60000).toISOString();
+
+    const cita = await ghl.post('/calendars/events/appointments', {
+      calendarId:  GHL_CALENDAR_ID,
+      locationId:  GHL_LOCATION_ID,
+      contactId,
+      startTime:   inicioISO,
+      endTime:     finISO,
+      title:       `${svc.nombre} — ${nombre}`,
+      appointmentStatus: 'confirmed',
+      ignoreDateRange: false,
+      toNotify: true,
+      notes: `Servicio: ${svc.nombre} (${svc.precio})\nTeléfono: ${telefono}${email ? '\nEmail: ' + email : ''}`,
     });
+
+    console.log(`[reservar] Cita creada: ${cita.data?.id}`);
 
     res.json({ ok: true, mensaje: `Reserva confirmada: ${svc.nombre} el ${fecha} a las ${hora}` });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al crear la reserva' });
+    console.error('[reservar] ERROR:', err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data?.message || err.message });
   }
 });
 
