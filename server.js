@@ -98,7 +98,8 @@ app.get('/api/disponibilidad', async (req, res) => {
     const slotsGHL = diaData.slots || [];
 
     const slots = slotsGHL.map(slot => {
-      const horaLocal = new Date(slot.startTime)
+      // GHL devuelve strings ISO directamente, no objetos
+      const horaLocal = new Date(slot)
         .toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: TIMEZONE });
       return { hora: horaLocal, disponible: true };
     });
