@@ -34,7 +34,7 @@ const ghl = axios.create({
   baseURL: 'https://services.leadconnectorhq.com',
   headers: {
     Authorization: `Bearer ${GHL_API_KEY}`,
-    Version: '2021-07-28',
+    Version: '2021-04-15',
     'Content-Type': 'application/json',
     'location-id': GHL_LOCATION_ID,
   },
