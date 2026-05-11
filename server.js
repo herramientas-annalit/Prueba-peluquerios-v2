@@ -36,6 +36,7 @@ const ghl = axios.create({
     Authorization: `Bearer ${GHL_API_KEY}`,
     Version: '2021-07-28',
     'Content-Type': 'application/json',
+    'location-id': GHL_LOCATION_ID,
   },
 });
 
