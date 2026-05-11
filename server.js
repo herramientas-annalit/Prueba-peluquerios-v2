@@ -131,19 +131,17 @@ app.post('/api/reservar', async (req, res) => {
     let contactId;
 
     try {
-      const busqueda = await ghl.get('/contacts/search/duplicate', {
-        params: { locationId: GHL_LOCATION_ID, phone: telefono },
+      const busqueda = await ghl.get('/contacts/', {
+        params: { locationId: GHL_LOCATION_ID, query: telefono },
       });
-      if (busqueda.data?.contact?.id) {
-        contactId = busqueda.data.contact.id;
+      const encontrado = busqueda.data?.contacts?.[0];
+      if (encontrado?.id) {
+        contactId = encontrado.id;
         console.log(`[reservar] Contacto existente: ${contactId}`);
       }
     } catch (err) {
-      // 404 en búsqueda simplemente significa que no existe aún, no es un error real
-      if (err.response?.status !== 404) {
-        const { status, mensaje } = interpretarErrorGHL(err, 'buscar-contacto');
-        return res.status(status).json({ error: mensaje });
-      }
+      // Si falla la búsqueda simplemente creamos el contacto igualmente
+      console.warn(`[reservar] Búsqueda de contacto falló, se intentará crear:`, err.response?.status);
     }
 
     if (!contactId) {
