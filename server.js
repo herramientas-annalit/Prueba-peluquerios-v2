@@ -129,6 +129,8 @@ app.get('/api/disponibilidad', async (req, res) => {
 
     // Generar todos los slots del horario comercial y marcar disponibilidad
     const todos = generarTodosSlots();
+    console.log(`[disponibilidad] Horas libres GHL:`, [...horasLibres].join(', '));
+    console.log(`[disponibilidad] Slots generados:`, todos.join(', '));
     const slots = todos.map(hora => ({ hora, disponible: horasLibres.has(hora) }));
 
     res.json({ fecha, slots });
