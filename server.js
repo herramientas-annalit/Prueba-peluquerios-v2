@@ -159,23 +159,10 @@ app.post('/api/reservar', async (req, res) => {
         contactId = nuevoContacto.data?.contact?.id;
         console.log(`[reservar] Contacto creado: ${contactId}`);
       } catch (err) {
-        // GHL devuelve 409 cuando el contacto ya existe, e incluye el ID en la respuesta
-        if (err.response?.status === 409) {
-          contactId = err.response?.data?.contact?.id || err.response?.data?.existingId;
-          if (contactId) {
-            console.log(`[reservar] Contacto duplicado detectado, usando existente: ${contactId}`);
-          } else {
-            // Si no viene el ID en el 409, intentar buscarlo de nuevo
-            try {
-              const reintento = await ghl.get('/contacts/', {
-                params: { locationId: GHL_LOCATION_ID, query: telefono },
-              });
-              contactId = reintento.data?.contacts?.[0]?.id;
-              console.log(`[reservar] Contacto recuperado tras 409: ${contactId}`);
-            } catch {
-              return res.status(500).json({ error: '[reservar] Contacto duplicado pero no se pudo recuperar el ID existente.' });
-            }
-          }
+        // GHL devuelve 400 con meta.contactId cuando el contacto ya existe
+        if (err.response?.status === 400 && err.response?.data?.meta?.contactId) {
+          contactId = err.response.data.meta.contactId;
+          console.log(`[reservar] Contacto duplicado detectado, usando existente: ${contactId}`);
         } else {
           const { status, mensaje } = interpretarErrorGHL(err, 'crear-contacto');
           return res.status(status).json({ error: mensaje });
