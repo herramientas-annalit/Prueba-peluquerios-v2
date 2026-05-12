@@ -12,12 +12,6 @@ const estado = {
 
 let calMes = new Date();
 
-// ===== NAVEGACIÓN SHOWCASE =====
-function elegirServicio(svc) {
-  seleccionarServicio(svc);
-  document.getElementById('reserva').scrollIntoView({ behavior: 'smooth' });
-}
-
 // ===== STEP 1: SERVICIO =====
 function seleccionarServicio(svc) {
   estado.servicio = svc;
