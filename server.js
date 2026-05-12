@@ -208,24 +208,11 @@ app.post('/api/reservar', async (req, res) => {
       const finMin   = hh * 60 + mm + SLOT_DURATION;
       const finHora  = `${String(Math.floor(finMin / 60)).padStart(2,'0')}:${String(finMin % 60).padStart(2,'0')}`;
 
-      // GHL guarda en UTC internamente — enviamos la hora tal como viene de GHL (ya en Europe/Madrid)
-      // con offset +02:00 en verano / +01:00 en invierno calculado dinámicamente
-      const refDate    = new Date(`${fecha}T${hora}:00`);
-      const offsetMins = -refDate.getTimezoneOffset(); // offset del servidor en minutos
-      // El servidor Railway corre en UTC, así que usamos Intl para obtener el offset de Madrid
-      const madridOffset = (() => {
-        const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: TIMEZONE, timeZoneName: 'shortOffset' });
-        const part = fmt.formatToParts(refDate).find(p => p.type === 'timeZoneName')?.value || 'GMT+2';
-        const match = part.match(/GMT([+-])(\d+)/);
-        if (!match) return '+02:00';
-        const sign = match[1];
-        const hrs  = match[2].padStart(2, '0');
-        return `${sign}${hrs}:00`;
-      })();
-
-      const inicioISO = `${fecha}T${hora}:00${madridOffset}`;
-      const finISO    = `${fecha}T${finHora}:00${madridOffset}`;
-      console.log(`[reservar] Enviando cita: ${inicioISO} → ${finISO} (offset Madrid: ${madridOffset})`);
+      // Enviamos con offset fijo de Madrid igual al formato que devuelve GHL en free-slots
+      // GHL devuelve "2026-05-15T10:30:00+02:00" — usamos exactamente el mismo formato
+      const inicioISO = `${fecha}T${hora}:00+02:00`;
+      const finISO    = `${fecha}T${finHora}:00+02:00`;
+      console.log(`[reservar] Enviando cita: ${inicioISO} → ${finISO}`);
 
       const cita = await ghl.post('/calendars/events/appointments', {
         calendarId:        GHL_CALENDAR_ID,
