@@ -121,11 +121,10 @@ app.get('/api/disponibilidad', async (req, res) => {
     const diaData  = data[fecha] || data[Object.keys(data)[0]] || {};
     const slotsGHL = diaData.slots || [];
 
-    // Convertir slots libres de GHL a set de horas "HH:MM"
+    // Extraer hora directamente del string ISO (evita doble conversión de timezone)
+    // GHL devuelve "2026-05-15T10:30:00+02:00" — tomamos HH:MM directamente
     const horasLibres = new Set(
-      slotsGHL.map(slot =>
-        new Date(slot).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: TIMEZONE })
-      )
+      slotsGHL.map(slot => slot.substring(11, 16))
     );
 
     // Generar todos los slots del horario comercial y marcar disponibilidad
