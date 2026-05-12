@@ -208,18 +208,17 @@ app.post('/api/reservar', async (req, res) => {
       const finMin   = hh * 60 + mm + SLOT_DURATION;
       const finHora  = `${String(Math.floor(finMin / 60)).padStart(2,'0')}:${String(finMin % 60).padStart(2,'0')}`;
 
-      // Enviamos con offset fijo de Madrid igual al formato que devuelve GHL en free-slots
-      // GHL devuelve "2026-05-15T10:30:00+02:00" — usamos exactamente el mismo formato
-      const inicioISO = `${fecha}T${hora}:00+02:00`;
-      const finISO    = `${fecha}T${finHora}:00+02:00`;
-      console.log(`[reservar] Enviando cita: ${inicioISO} → ${finISO}`);
+      // GHL interpreta el startTime como UTC puro — hay que enviar en Unix ms
+      const inicioMs = new Date(`${fecha}T${hora}:00+02:00`).getTime();
+      const finMs    = new Date(`${fecha}T${finHora}:00+02:00`).getTime();
+      console.log(`[reservar] Enviando cita: ${new Date(inicioMs).toISOString()} → ${new Date(finMs).toISOString()} (${inicioMs})`);
 
       const cita = await ghl.post('/calendars/events/appointments', {
         calendarId:        GHL_CALENDAR_ID,
         locationId:        GHL_LOCATION_ID,
         contactId,
-        startTime:         inicioISO,
-        endTime:           finISO,
+        startTime:         inicioMs,
+        endTime:           finMs,
         title:             `${svc.nombre} — ${nombre}`,
         appointmentStatus: 'confirmed',
         ignoreDateRange:   false,
