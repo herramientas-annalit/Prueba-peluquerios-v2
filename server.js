@@ -24,6 +24,29 @@ if (missingVars.length > 0) {
   console.error('[CONFIG] El servidor arrancará pero las llamadas a GHL fallarán hasta que se configuren.');
 }
 
+// Horario comercial completo para generar todos los slots del día
+const HORARIO = [
+  { inicio: '09:00', fin: '13:30' },
+  { inicio: '16:30', fin: '20:00' },
+];
+
+function generarTodosSlots() {
+  const slots = [];
+  for (const bloque of HORARIO) {
+    const [hIni, mIni] = bloque.inicio.split(':').map(Number);
+    const [hFin, mFin] = bloque.fin.split(':').map(Number);
+    let minutos = hIni * 60 + mIni;
+    const finMinutos = hFin * 60 + mFin;
+    while (minutos + SLOT_DURATION <= finMinutos) {
+      const h = String(Math.floor(minutos / 60)).padStart(2, '0');
+      const m = String(minutos % 60).padStart(2, '0');
+      slots.push(`${h}:${m}`);
+      minutos += SLOT_DURATION;
+    }
+  }
+  return slots;
+}
+
 const SERVICIOS = {
   corte:       { nombre: 'Corte',         precio: '15 €' },
   barba:       { nombre: 'Barba',         precio: '10 €' },
@@ -98,12 +121,16 @@ app.get('/api/disponibilidad', async (req, res) => {
     const diaData  = data[fecha] || data[Object.keys(data)[0]] || {};
     const slotsGHL = diaData.slots || [];
 
-    const slots = slotsGHL.map(slot => {
-      // GHL devuelve strings ISO directamente, no objetos
-      const horaLocal = new Date(slot)
-        .toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: TIMEZONE });
-      return { hora: horaLocal, disponible: true };
-    });
+    // Convertir slots libres de GHL a set de horas "HH:MM"
+    const horasLibres = new Set(
+      slotsGHL.map(slot =>
+        new Date(slot).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: TIMEZONE })
+      )
+    );
+
+    // Generar todos los slots del horario comercial y marcar disponibilidad
+    const todos = generarTodosSlots();
+    const slots = todos.map(hora => ({ hora, disponible: horasLibres.has(hora) }));
 
     res.json({ fecha, slots });
   } catch (err) {
@@ -193,8 +220,8 @@ app.post('/api/reservar', async (req, res) => {
       });
       console.log(`[reservar] Cita creada: ${cita.data?.id}`);
     } catch (err) {
-      const { status, mensaje } = interpretarErrorGHL(err, 'crear-cita');
-      return res.status(status).json({ error: mensaje });
+      interpretarErrorGHL(err, 'crear-cita'); // log interno
+      return res.status(500).json({ error: 'No se pudo crear la cita. Por favor, inténtalo de nuevo o llámanos directamente.' });
     }
 
     res.json({ ok: true, mensaje: `Reserva confirmada: ${svc.nombre} el ${fecha} a las ${hora}` });
