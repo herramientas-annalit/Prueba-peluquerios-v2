@@ -204,29 +204,28 @@ app.post('/api/reservar', async (req, res) => {
 
     // 2. Crear la cita en GHL
     try {
-      // Obtener offset real de Europe/Madrid para la fecha dada (funciona en CET y CEST)
-      const tempDate  = new Date(`${fecha}T${hora}:00`);
-      const offsetMin = -tempDate.toLocaleString('en', { timeZone: TIMEZONE, timeZoneName: 'shortOffset' })
-                          .match(/GMT([+-]\d+(?::\d+)?)/)?.[1]
-                          .split(':').reduce((h, m, i) => i === 0 ? parseInt(h) * 60 : parseInt(h) + parseInt(m), 0)
-                        || new Intl.DateTimeFormat('en', { timeZone: TIMEZONE, timeZoneName: 'shortOffset' })
-                          .formatToParts(tempDate).find(p => p.type === 'timeZoneName')?.value;
+      const [hh, mm] = hora.split(':').map(Number);
+      const finMin   = hh * 60 + mm + SLOT_DURATION;
+      const finHora  = `${String(Math.floor(finMin / 60)).padStart(2,'0')}:${String(finMin % 60).padStart(2,'0')}`;
 
-      // Forma más simple y fiable: usar Intl para obtener el offset
-      const offsetHours = (() => {
-        const utc = new Date(`${fecha}T${hora}:00Z`);
-        const local = new Date(utc.toLocaleString('en-US', { timeZone: TIMEZONE }));
-        const diff = Math.round((local - utc) / 60000); // diferencia en minutos
-        const sign = diff >= 0 ? '+' : '-';
-        const abs  = Math.abs(diff);
-        return `${sign}${String(Math.floor(abs / 60)).padStart(2,'0')}:${String(abs % 60).padStart(2,'0')}`;
+      // GHL guarda en UTC internamente — enviamos la hora tal como viene de GHL (ya en Europe/Madrid)
+      // con offset +02:00 en verano / +01:00 en invierno calculado dinámicamente
+      const refDate    = new Date(`${fecha}T${hora}:00`);
+      const offsetMins = -refDate.getTimezoneOffset(); // offset del servidor en minutos
+      // El servidor Railway corre en UTC, así que usamos Intl para obtener el offset de Madrid
+      const madridOffset = (() => {
+        const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: TIMEZONE, timeZoneName: 'shortOffset' });
+        const part = fmt.formatToParts(refDate).find(p => p.type === 'timeZoneName')?.value || 'GMT+2';
+        const match = part.match(/GMT([+-])(\d+)/);
+        if (!match) return '+02:00';
+        const sign = match[1];
+        const hrs  = match[2].padStart(2, '0');
+        return `${sign}${hrs}:00`;
       })();
 
-      const inicioISO = `${fecha}T${hora}:00${offsetHours}`;
-      const [hh, mm]  = hora.split(':').map(Number);
-      const finMin    = hh * 60 + mm + SLOT_DURATION;
-      const finHora   = `${String(Math.floor(finMin / 60)).padStart(2,'0')}:${String(finMin % 60).padStart(2,'0')}`;
-      const finISO    = `${fecha}T${finHora}:00${offsetHours}`;
+      const inicioISO = `${fecha}T${hora}:00${madridOffset}`;
+      const finISO    = `${fecha}T${finHora}:00${madridOffset}`;
+      console.log(`[reservar] Enviando cita: ${inicioISO} → ${finISO} (offset Madrid: ${madridOffset})`);
 
       const cita = await ghl.post('/calendars/events/appointments', {
         calendarId:        GHL_CALENDAR_ID,
