@@ -204,8 +204,29 @@ app.post('/api/reservar', async (req, res) => {
 
     // 2. Crear la cita en GHL
     try {
-      const inicioISO = new Date(`${fecha}T${hora}:00`).toISOString();
-      const finISO    = new Date(new Date(`${fecha}T${hora}:00`).getTime() + SLOT_DURATION * 60000).toISOString();
+      // Obtener offset real de Europe/Madrid para la fecha dada (funciona en CET y CEST)
+      const tempDate  = new Date(`${fecha}T${hora}:00`);
+      const offsetMin = -tempDate.toLocaleString('en', { timeZone: TIMEZONE, timeZoneName: 'shortOffset' })
+                          .match(/GMT([+-]\d+(?::\d+)?)/)?.[1]
+                          .split(':').reduce((h, m, i) => i === 0 ? parseInt(h) * 60 : parseInt(h) + parseInt(m), 0)
+                        || new Intl.DateTimeFormat('en', { timeZone: TIMEZONE, timeZoneName: 'shortOffset' })
+                          .formatToParts(tempDate).find(p => p.type === 'timeZoneName')?.value;
+
+      // Forma más simple y fiable: usar Intl para obtener el offset
+      const offsetHours = (() => {
+        const utc = new Date(`${fecha}T${hora}:00Z`);
+        const local = new Date(utc.toLocaleString('en-US', { timeZone: TIMEZONE }));
+        const diff = Math.round((local - utc) / 60000); // diferencia en minutos
+        const sign = diff >= 0 ? '+' : '-';
+        const abs  = Math.abs(diff);
+        return `${sign}${String(Math.floor(abs / 60)).padStart(2,'0')}:${String(abs % 60).padStart(2,'0')}`;
+      })();
+
+      const inicioISO = `${fecha}T${hora}:00${offsetHours}`;
+      const [hh, mm]  = hora.split(':').map(Number);
+      const finMin    = hh * 60 + mm + SLOT_DURATION;
+      const finHora   = `${String(Math.floor(finMin / 60)).padStart(2,'0')}:${String(finMin % 60).padStart(2,'0')}`;
+      const finISO    = `${fecha}T${finHora}:00${offsetHours}`;
 
       const cita = await ghl.post('/calendars/events/appointments', {
         calendarId:        GHL_CALENDAR_ID,
